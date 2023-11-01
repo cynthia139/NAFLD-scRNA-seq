@@ -1,0 +1,676 @@
+library(Seurat)
+library(SeuratObject)
+library(ggplot2)
+library(patchwork)
+library(viridis)
+library(cowplot)
+library(dplyr)
+library(gplots)
+library(ggpubr)
+library(gridExtra)
+options(future.globals.maxSize = 3e+011)
+options(Seurat.object.assay.version = "v5")
+NAFLDlivermerge <- readRDS("NAFLDlivermerge.rds")
+NAFLDlivermerge$tissue[which(NAFLDlivermerge$tissue == "liver")] <- "Liver"
+NAFLDliver <- NAFLDlivermerge
+NAFLDliver@meta.data <- NAFLDliver@meta.data[,c(1:20)]
+table(NAFLDliver$tissue)
+NAFLDliver[["RNA"]] <- split(NAFLDliver[["RNA"]], f = NAFLDliver$LibType)
+NAFLDliver <- NormalizeData(NAFLDliver)
+NAFLDliver <- FindVariableFeatures(NAFLDliver)
+NAFLDliver <- ScaleData(NAFLDliver)
+NAFLDliver <- RunPCA(NAFLDliver)
+NAFLDliver <- FindNeighbors(NAFLDliver, dims = 1:15, reduction = "pca")
+NAFLDliver <- FindClusters(NAFLDliver, resolution = 0.2, cluster.name = "unintegrated_clusters")
+NAFLDliver <- RunUMAP(NAFLDliver, dims = 1:15, reduction = "pca", reduction.name = "umap.unintegrated")
+NAFLDliver <- IntegrateLayers(NAFLDliver, method = RPCAIntegration, orig = "pca", new.reduction = "integrated.rpca", verbose = F)
+NAFLDliver <- FindNeighbors(NAFLDliver, reduction = "integrated.rpca", dims = 1:15)
+NAFLDliver <- FindClusters(NAFLDliver, resolution = 0.2, cluster.name = "rpca_clusters")
+NAFLDliver <- RunUMAP(NAFLDliver, reduction = "integrated.rpca", dims = 1:15, reduction.name = "umap.rpca")
+DimPlot(
+  NAFLDliver,
+  reduction = "umap.rpca",
+  group.by = c("GSE", "LibType", "Group", "Group1", "CellType", "rpca_clusters", "NAS", "FIB"),
+  label = T,raster=FALSE, ncol=3
+)
+
+NAFLDliver <- JoinLayers(NAFLDliver)
+
+Idents(NAFLDliver) <- "rpca_clusters"
+#NAFLDliver.markers01 <- FindAllMarkers(NAFLDliver, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+#write.csv(NAFLDliver.markers01, file = "rpcaclusterNAFLDliverLibTypesplitres01dim15dim15res01.csv")
+
+NAFLDliver.markers02 <- FindAllMarkers(NAFLDliver, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+write.csv(NAFLDliver.markers02, file = "rpcaclusterNAFLDliverLibTypesplitres02dim15dim15res02.csv")
+
+DimPlot(NAFLDliver, reduction = "umap.rpca", label = TRUE, pt.size = 0.5) + NoLegend()
+NAFLDliverRPCA15d02 <- RenameIdents(NAFLDliver, `0` = "T_cell", `1` = "NK_cell", `2` = "Hepatocyte", `3` = "Hepatocyte", `4` = "Hepatocyte", `5` = "Monocyte", `6` = "Endothelial_cell", `7` = "T_cell", `8` = "Cholangiocyte", `9` = "B_cell", `10` = "Hepatocyte", `11` = "Endothelial_cell", `12` = "HSC/MFB", `13` = "Monocyte", `14` = "Cholangiocyte", `15` = "Hepatocyte", `16` = "Proliferating T/NK", `17` = "Plasma_cell", `18` = "Macrophage", `19` = "Monocyte", `20` = "T_cell", `21` = "Mast_cell")
+NAFLDliverRPCA15d02$rpca_celltype = NAFLDliverRPCA15d02$rpca_clusters
+
+write.csv(NAFLDliverRPCA15d02@meta.data, file = "NAFLDliverRPCA15d02meta.csv")
+NAFLDliverRPCA15d02meta <- read.csv("NAFLDliverRPCA15d02meta.csv")
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "0")] <- "T_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "1")] <- "NK_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "2")] <- "Hepatocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "3")] <- "Hepatocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "4")] <- "Hepatocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "5")] <- "Monocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "6")] <- "Endothelial_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "7")] <- "T_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "8")] <- "Cholangiocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "9")] <- "B_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "10")] <- "Hepatocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "11")] <- "Endothelial_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "12")] <- "HSC/MFB"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "13")] <- "Monocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "14")] <- "Cholangiocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "15")] <- "Hepatocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "16")] <- "Proliferating T/NK"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "17")] <- "Plasma_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "18")] <- "Macrophage"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "19")] <- "Monocyte"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "20")] <- "T_cell"
+NAFLDliverRPCA15d02meta$rpca_celltype[which(NAFLDliverRPCA15d02meta$rpca_celltype == "21")] <- "Mast_cell"
+
+NAFLDliverRPCA15d02a <- AddMetaData(
+  object = NAFLDliverRPCA15d02,
+  metadata = NAFLDliverRPCA15d02meta,
+  col.name = 'rpca_celltype'
+)
+
+NAFLDliverRPCA15d02a$Group[which(NAFLDliverRPCA15d02a$Group == "Health")] <- "Healthy"
+NAFLDliverRPCA15d02a$Group1[which(NAFLDliverRPCA15d02a$Group1 == "Health")] <- "Healthy"
+NAFLDliver$Group[which(NAFLDliver$Group == "Health")] <- "Healthy"
+NAFLDliver$Group1[which(NAFLDliver$Group1 == "Health")] <- "Healthy"
+
+markers.to.plot <- c("IL1A","IL1B","IL1R1","IL36A","IL36B","IL36C","IL36R","IL33","IL33R","MYD88","PI3K","IRAK4","GAB2","SHP2","PDPK1","IRAK1","TRAF6","IKK","TAK1","MAP3K","MKK3","MKK4","MKK6","MKK7","NFKB")
+DotPlot(NAFLDliverRPCA15d02a, features = markers.to.plot, cols = c("#968F9F","#7c117b"), dot.scale = 3, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+DotPlot(NAFLDliverRPCA15d02a, features = markers.to.plot, dot.scale = 4) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+theme_set(theme_cowplot())
+DimPlot(NAFLDliverRPCA15d02a, reduction = "umap.rpca", label = TRUE, pt.size = 0.5, cols = c("#ad1544","#17d5ce","#7c117b","yellow4","blue3","#f386de","red3","green","#fdbd6d","#428ec0","#063061","#968F9F","yellow"))  + labs(color = "Cell type")
+
+DimPlot(NAFLDliver, group.by = c("GSE"),label = F,raster=T, cols = c("#7c117b","#8d6bae","#f98071","#fdbd6d","#428ec0","#063061","#968F9F","#ad1544"), reduction="umap.unintegrated") + labs(color = "Source")
+DimPlot(NAFLDliver, group.by = c("GSE"),label = F,raster=T, cols = c("#7c117b","#8d6bae","#f98071","#fdbd6d","#428ec0","#063061","#968F9F","#ad1544"), reduction="umap.rpca") + labs(color = "Source")
+DimPlot(NAFLDliver, group.by = c("LibType"),label = T,raster=T, cols = c("#968F9F","#7c117b"), reduction="umap.rpca") + labs(color = "Library type")
+DimPlot(NAFLDliver, group.by = c("Group"),label = T,raster=T, cols = c("#968F9F","#7c117b"), reduction="umap.rpca") + labs(color = "Group")
+DimPlot(NAFLDliver, group.by = c("CellType"),label = T,raster=T, cols = c("#fdbd6d","#7c117b","#428ec0","#ad1544","#968F9F"), reduction="umap.rpca") + labs(color = "Cell type")
+
+Hepatocyte <- subset(NAFLDliverRPCA15d02a, idents = "Hepatocyte")
+HSC_MFB <- subset(NAFLDliverRPCA15d02a, idents = "HSC/MFB")
+T_cell <- subset(NAFLDliverRPCA15d02a, idents = "T_cell")
+NK_cell <- subset(NAFLDliverRPCA15d02a, idents = "NK_cell")
+Mast_cell <- subset(NAFLDliverRPCA15d02a, idents = "Mast_cell")
+Monocyte <- subset(NAFLDliverRPCA15d02a, idents = "Monocyte")
+Macrophage <- subset(NAFLDliverRPCA15d02a, idents = "Macrophage")
+Proliferating_TNK <- subset(NAFLDliverRPCA15d02a, idents = "Proliferating T/NK")
+Cholangiocyte <- subset(NAFLDliverRPCA15d02a, idents = "Cholangiocyte")
+Endothelial_cell <- subset(NAFLDliverRPCA15d02a, idents = "Endothelial_cell")
+B_cell <- subset(NAFLDliverRPCA15d02a, idents = "B_cell")
+Plasma_cell <- subset(NAFLDliverRPCA15d02a, idents = "Plasma_cell")
+
+NAFLDliverRPCA15d02a$Group[which(NAFLDliverRPCA15d02a$Group == "Health")] <- "Healthy"
+table(NAFLDliverRPCA15d02a$Group1)
+NAFLDliverRPCA15d02a$Group1[which(NAFLDliverRPCA15d02a$Group1 == "Health")] <- "Healthy"
+write.csv(NAFLDliverRPCA15d02a@meta.data, file = "NAFLDliverRPCA15d02a@meta.data.csv")
+
+HSC_MFB[["RNA"]] <- split(HSC_MFB[["RNA"]], f = HSC_MFB$LibType)
+HSC_MFB <- NormalizeData(HSC_MFB)
+HSC_MFB <- FindVariableFeatures(HSC_MFB)
+HSC_MFB <- ScaleData(HSC_MFB)
+HSC_MFB <- RunPCA(HSC_MFB)
+HSC_MFB <- FindNeighbors(HSC_MFB, reduction = "pca", dims = 1:15)
+HSC_MFB <- FindClusters(HSC_MFB, resolution = 0.05, cluster.name = "unintegrated_clusters")
+HSC_MFB <- RunUMAP(HSC_MFB, reduction = "pca", dims = 1:15, reduction.name = "umap.unintegrated")
+HSC_MFB <- IntegrateLayers(HSC_MFB, method = RPCAIntegration, orig = "pca", new.reduction = "integrated.rpca", verbose = F)
+HSC_MFB <- FindNeighbors(HSC_MFB, reduction = "integrated.rpca", dims = 1:15)
+HSC_MFB <- FindClusters(HSC_MFB, resolution = 0.05, cluster.name = "rpca_clusters")
+HSC_MFB <- RunUMAP(HSC_MFB, reduction = "integrated.rpca", dims = 1:15, reduction.name = "umap.rpca")
+DimPlot(
+  HSC_MFB,
+  reduction = "umap.rpca",
+  group.by = c("GSE", "LibType", "Group", "Group1", "CellType", "rpca_clusters", "NAS", "FIB"),
+  label = T,raster=FALSE, ncol=3
+)
+
+HSC_MFB <- JoinLayers(HSC_MFB)
+
+HSC_MFBRPCA15d005 <- RenameIdents(HSC_MFB, `0` = "Myofibroblast", `1` = "HSC", `2` = "HSC", `3` = "HSC", `4` = "HSC", `5` = "HSC", `6` = "HSC")
+
+markers.to.plot <- c("IGFBP3","DCN","CXCL14","COLEC11","BGN","CXCL12","ANGPTL6","TMEM56","ECM1","COL3A1","ADIRF","NDUFA4L2","CALD1","C11orf96","NOTCH3","FRZB","MYH11","ACTA2","TPM1","GPX3")
+DotPlot(HSC_MFBRPCA15d005, features = markers.to.plot,  dot.scale = 15) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+
+Idents(HSC_MFB) <- "rpca_clusters"
+
+HSC_MFB.markers005 <- FindAllMarkers(HSC_MFB, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+write.csv(HSC_MFB.markers005, file = "rpcaclusterHSC_MFBLibTypesplitres005dim15dim15res005.csv")
+
+DimPlot(HSC_MFBRPCA15d005, reduction = "umap.rpca", label = TRUE, pt.size = 0.5) + NoLegend()
+markers.to.plot <- c("IGFBP3","CXCL12","ECM1","COL3A1","C11orf96","NOTCH3","FRZB","MYH11")
+DotPlot(HSC_MFBRPCA15d005, features = markers.to.plot,  dot.scale = 20) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+
+HSC_MFBRPCA15d005 <- RenameIdents(HSC_MFB, `0` = "Myofibroblast", `1` = "HSC", `2` = "HSC", `3` = "HSC", `4` = "HSC", `5` = "HSC", `6` = "HSC")
+
+markers.to.plot <- c("IGFBP3","DCN","CXCL14","COLEC11","BGN","CXCL12","ANGPTL6","TMEM56","ECM1","COL3A1","ADIRF","NDUFA4L2","CALD1","C11orf96","NOTCH3","FRZB","MYH11","ACTA2","TPM1","GPX3")
+DotPlot(HSC_MFBRPCA15d005, features = markers.to.plot,  dot.scale = 15) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+
+
+DimPlot(HSC_MFBRPCA15d005, reduction = "umap.rpca", label = TRUE, pt.size = 0.5, cols = c("#8d6bae","grey"))  + labs(color = "Cell type")
+markers.to.plot <- c("IGFBP3","DCN","CXCL14","CXCL12","ANGPTL6","ECM1","ADIRF","FRZB","MYH11","ACTA2","TPM1","GPX3")
+DotPlot(HSC_MFBRPCA15d005, features = markers.to.plot,  dot.scale = 15) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+theme_set(theme_cowplot())
+VlnPlot(HSC_MFBRPCA15d005, raster=FALSE, features = c("QSOX1"), cols = c("#968F9F","#7c117b"), split.by = "Group", pt.size = 0, combine = FALSE)
+VlnPlot(HSC_MFB, raster=FALSE, features = c("QSOX1"), cols = c("#968F9F","#7c117b"), split.by = "Group", pt.size = 0, combine = FALSE)
+
+Idents(Hepatocyte) <- "NAS"
+VlnPlot(Hepatocyte, raster=FALSE,features = c("IL1RAP"), split.by = "NAS", pt.size = 0.1, combine = FALSE)
+VlnPlot(HSC_MFB, raster=FALSE, features = c("QSOX1"), split.by = "Group", pt.size = 0.1, combine = FALSE)
+
+vp_case1 <- function(gene_signature, file_name, test_sign){
+  plot_case1 <- function(signature, y_max = NULL){
+    VlnPlot(HSC, features = signature,
+            pt.size = 0,raster=FALSE, cols = c("#968F9F","#7c117b"), 
+            group.by = "Group", 
+            y.max = y_max # add the y-axis maximum value - otherwise p-value hidden
+    ) + stat_compare_means(comparisons = test_sign, label = "p.format",method = "wilcox.test")+labs(title="HSC",y="QSOX1 Expression Level")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]]) # get the max no. for each gene
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
+  file_name <- paste0(file_name, "_r.png")
+  ggsave(file_name, width = 5, height = 3)
+}
+
+gene_sig <- c("QSOX1")
+comparisons <- list(c("Healthy", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "HSC", test_sign = comparisons)
+
+
+vp_case1 <- function(gene_signature, file_name, test_sign){
+  plot_case1 <- function(signature, y_max = NULL){
+    VlnPlot(Hepatocyte, features = signature,
+            pt.size = 0,raster=FALSE, cols = c("#968F9F","#7c117b"), 
+            group.by = "Group", 
+            y.max = y_max # add the y-axis maximum value - otherwise p-value hidden
+    ) + stat_compare_means(comparisons = test_sign, label = "p.format",method = "wilcox.test")+labs(title="Hepatocyte",y="CFHR3 Expression Level")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]]) # get the max no. for each gene
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
+  file_name <- paste0(file_name, "_r.png")
+  ggsave(file_name, width = 5, height = 3)
+}
+
+gene_sig <- c("CFHR3")
+comparisons <- list(c("Healthy", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "Hepatocyte", test_sign = comparisons)
+
+
+markers.to.plot <- c("QSOX1","IL1RAP")
+DotPlot(NAFLDliverRPCA15d02a, features = markers.to.plot, dot.scale = 8) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+theme_set(theme_cowplot())
+VlnPlot(NAFLDliverRPCA15d02a, raster=FALSE, features = c("QSOX1"), cols = c("#968F9F","#7c117b"), split.by = "Group", pt.size = 0, combine = FALSE)
+
+markers.to.plot <- c("IL1RAP")
+DotPlot(NAFLDliverRPCA15d02a, features = markers.to.plot, dot.scale = 3) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+theme_set(theme_cowplot())
+VlnPlot(NAFLDliverRPCA15d02a, raster=FALSE, features = c("IL1RAP"), cols = c("#968F9F","#7c117b"), split.by = "Group", pt.size = 0, combine = FALSE)
+VlnPlot(Hepatocyte, raster=FALSE, features = c("IL1RAP"), cols = c("#968F9F","#7c117b"), split.by = "Group", pt.size = 0, combine = FALSE)
+vp_case1 <- function(gene_signature, file_name, test_sign){
+  plot_case1 <- function(signature, y_max = NULL){
+    VlnPlot(Hepatocyte, features = signature,
+            pt.size = 0,raster=FALSE, cols = c("#968F9F","#7c117b"), 
+            group.by = "Group", 
+            y.max = y_max # add the y-axis maximum value - otherwise p-value hidden
+    ) + stat_compare_means(comparisons = test_sign, label = "p.format",method = "wilcox.test")+labs(title="Hepatocyte",y="IL1RAP Expression Level")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]]) # get the max no. for each gene
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
+  file_name <- paste0(file_name, "_r.png")
+  ggsave(file_name, width = 5, height = 3)
+}
+
+gene_sig <- c("IL1RAP")
+comparisons <- list(c("Health", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "Hepatocyte", test_sign = comparisons)
+
+vp_case1 <- function(gene_signature, file_name, test_sign){
+  plot_case1 <- function(signature, y_max = NULL){
+    VlnPlot(Fibroblast, features = signature,
+            pt.size = 0,raster=FALSE, cols = c("#7c117b", "#968F9F"), 
+            group.by = "Group", 
+            y.max = y_max # add the y-axis maximum value - otherwise p-value hidden
+    ) + stat_compare_means(comparisons = test_sign, label = "p.format",method = "wilcox.test")+labs(title="Fibroblast",y="COL6A3 Expression Level")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]]) # get the max no. for each gene
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
+  file_name <- paste0(file_name, "_r.png")
+  ggsave(file_name, width = 5, height = 3)
+}
+
+gene_sig <- c("COL6A3")
+comparisons <- list(c("Health", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "Fibroblast", test_sign = comparisons)
+#
+vp_case1 <- function(gene_signature, file_name, test_sign){
+  plot_case1 <- function(signature, y_max = NULL){
+    VlnPlot(Hepatocyte, features = signature,
+            pt.size = 0,raster=FALSE, cols = c("#7c117b", "#968F9F"), 
+            group.by = "Group", 
+            y.max = y_max # add the y-axis maximum value - otherwise p-value hidden
+    ) + stat_compare_means(comparisons = test_sign, label = "p.format",method = "wilcox.test")+labs(title="Hepatocyte",y="CFHR3 Expression Level")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]]) # get the max no. for each gene
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
+  file_name <- paste0(file_name, "_r.png")
+  ggsave(file_name, width = 5, height = 3)
+}
+
+gene_sig <- c("CFHR3")
+comparisons <- list(c("Health", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "Hepatocyte", test_sign = comparisons)
+
+markers.to.plot <- c("QSOX1")
+DotPlot(Fibroblast, features = markers.to.plot, cols = c("#968F9F","#7c117b" ), dot.scale = 3, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+markers.to.plot <- c("A2M", "C7", "COL6A3", "COLEC11", "ENPP2", "FBLN1", "FBN1", "FCGBP", "IGFBP6", "LCN2", "LUM", "MMP2", "PAPLN", "PTGDS", "QSOX1", "VWF")
+DotPlot(NAFLDliverRPCA15d02, features = markers.to.plot, cols = c("#968F9F","#7c117b"), dot.scale = 10, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+markers.to.plot <- c("AZGP1", "C1RL", "C4BPA", "C6", "C8B", "CFHR3", "CNDP1", "F2", "GC", "HP", "HPR", "IL1RAP", "ITIH1", "ITIH2", "ITIH4", "KLKB1", "PON3", "SERPINA10", "SERPINC1", "SERPING1", "SMPDL3A", "TTR")
+DotPlot(NAFLDliverRPCA15d02, features = markers.to.plot, cols = c("#968F9F","#7c117b"), dot.scale = 8, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+markers.to.plot <- c("COL6A3")
+DotPlot(NAFLDliverRPCA15d02, features = markers.to.plot, cols = c("#968F9F","#7c117b"), dot.scale = 6, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+
+markers.to.plot <- c("CFHR3")
+DotPlot(NAFLDliverRPCA15d02, features = markers.to.plot, cols = c("#968F9F","#7c117b"), dot.scale = 3, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+NAFLDpbmcmerge <- readRDS("NAFLDpbmcmerge.rds")
+NAFLDpbmc <- NAFLDpbmcmerge
+
+NAFLDpbmc[["RNA"]] <- split(NAFLDpbmc[["RNA"]], f = NAFLDpbmc$GSE)
+NAFLDpbmc
+NAFLDpbmc <- NormalizeData(NAFLDpbmc)
+NAFLDpbmc <- FindVariableFeatures(NAFLDpbmc)
+NAFLDpbmc <- ScaleData(NAFLDpbmc)
+NAFLDpbmc <- RunPCA(NAFLDpbmc)
+NAFLDpbmc@meta.data <- NAFLDpbmc@meta.data[,c(1:20)]
+NAFLDpbmc <- FindNeighbors(NAFLDpbmc, dims = 1:15, reduction = "pca")
+NAFLDpbmc <- FindClusters(NAFLDpbmc, resolution = 0.1, cluster.name = "unintegrated_clusters")
+NAFLDpbmc <- RunUMAP(NAFLDpbmc, reduction = "pca", dims = 1:15, reduction.name = "umap.unintegrated")
+
+NAFLDpbmc <- IntegrateLayers(
+object = NAFLDpbmc, method = RPCAIntegration,
+orig.reduction = "pca", new.reduction = "integrated.rpca",
+verbose = FALSE)
+
+NAFLDpbmc <- FindNeighbors(NAFLDpbmc, reduction = "integrated.rpca", dims = 1:15)
+NAFLDpbmc <- FindClusters(NAFLDpbmc, resolution = 0.1, cluster.name = "rpca_clusters")
+NAFLDpbmc <- RunUMAP(NAFLDpbmc, reduction = "integrated.rpca", dims = 1:15, reduction.name = "umap.rpca")
+
+NAFLDpbmc <- JoinLayers(NAFLDpbmc)
+
+NAFLDpbmc$CellType[which(is.na(NAFLDpbmc$CellType))] <- "Total cells"
+DimPlot(NAFLDpbmc, group.by = c("GSE"),label = F,raster=T, cols = c("#7c117b","#8d6bae","#ad1544","#428ec0","#063061","#968F9F","#f98071"), reduction="umap.unintegrated") + labs(color = "Source")
+DimPlot(NAFLDpbmc, group.by = c("GSE"),label = F,raster=T, cols = c("#8d6bae","#7c117b","#968F9F","#428ec0","#ad1544","#063061","#f98071"), reduction="umap.rpca") + labs(color = "Source")
+DimPlot(NAFLDpbmc, group.by = c("Group"),label = T,raster=T, cols = c("#968F9F","#7c117b"), reduction="umap.rpca") + labs(color = "Group")
+DimPlot(NAFLDpbmc, group.by = c("CellType"),label = T,raster=T, cols = c("#7c117b","#428ec0","#f98071","#968F9F"), reduction="umap.rpca") + labs(color = "Cell type")
+
+Idents(NAFLDpbmc) <- "rpca_clusters"
+NAFLDpbmc.markers01 <- FindAllMarkers(NAFLDpbmc, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+write.csv(NAFLDpbmc.markers01, file = "rpcaclusterNAFLDpbmcdim15res01.csv")
+
+DimPlot(NAFLDpbmc, raster=FALSE, reduction = "umap.rpca", label = TRUE, pt.size = 0.5) + NoLegend()
+NAFLDpbmcRPCA15d01 <- RenameIdents(NAFLDpbmc, `0` = "CD8+T_cell", `1` = "CD4+T_cell", `2` = "Monocyte", `3` = "NK_cell", `4` = "B_cell", `5` = "Plasma_cell", `6` = "Monocyte")
+DimPlot(NAFLDpbmcRPCA15d01, reduction = "umap.rpca", label = TRUE, pt.size = 0.5, cols = c("#7c117b","#063061","#8d6bae","lightgrey","#428ec0","#ad1544")) + labs(color = "Cell type")
+
+markers.to.plot <- c("DERL3","MZB1", "JCHAIN", "TNFRSF17", "TNFRSF13C","RALGPS2", "MS4A1", "BANK1", "STMN1", "TYMS", "PCNA", "CLSPN", "FCN1",  "LYZ", "S100A9", "MNDA", "IL7R", "MAL","TCF7","LEF1","CD8A", "GZMH", "FGFBP2", "DUSP2")
+DotPlot(NAFLDpbmcRPCA15d01, features = markers.to.plot, dot.scale = 3) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+DimPlot(NAFLDpbmcRPCA15d01, reduction = "umap.rpca", label = TRUE, pt.size = 0.5, cols = c("#7c117b","#063061","#8d6bae","lightgrey","#428ec0","#ad1544"))  + labs(color = "Cell_types")
+
+markers.to.plot <- c("QSOX1","IL1RAP")
+DotPlot(NAFLDpbmcRPCA15d01, features = markers.to.plot, dot.scale = 3) + scale_colour_gradientn(colours = rev(c("#7c117b","lightgrey")))+
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+VlnPlot(NKcell, raster=FALSE, features = c("QSOX1","IL1RAP"), cols = c("#968F9F","#7c117b"), split.by = "Group", pt.size = 0, combine = FALSE)
+
+NKcell <- subset(NAFLDpbmcRPCA15d01, idents = "NK_cell")
+Monocyte <- subset(NAFLDpbmcRPCA15d01, idents = "Monocyte")
+CD8Tcell <- subset(NAFLDpbmcRPCA15d01, idents = "CD8+T_cell")
+CD4Tcell <- subset(NAFLDpbmcRPCA15d01, idents = "CD4+T_cell")
+Bcell <- subset(NAFLDpbmcRPCA15d01, idents = "B_cell")
+Plasmacell <- subset(NAFLDpbmcRPCA15d01, idents = "Plasma_cell")
+
+NAFLDpbmcRPCA15d01$Group[which(NAFLDpbmcRPCA15d01$Group == "Health")] <- "Healthy"
+NAFLDpbmcRPCA15d01$Group1[which(NAFLDpbmcRPCA15d01$Group1 == "Health")] <- "Healthy"
+write.csv(NAFLDpbmcRPCA15d01@meta.data, file = "NAFLDpbmcRPCA15d01@meta.data.csv")
+
+vp_case1 <- function(gene_signature, file_name, test_sign){
+  plot_case1 <- function(signature, y_max = NULL){
+    VlnPlot(NKcell, features = signature,
+            pt.size = 0,raster=FALSE, cols = c("#968F9F","#7c117b"), 
+            group.by = "Group", 
+            y.max = y_max # add the y-axis maximum value - otherwise p-value hidden
+    )+ geom_boxplot(color="black", alpha=0.02, palette = "jco",size=0.5,repel = TRUE)  + stat_compare_means(comparisons = test_sign, label = "p.format",method = "wilcox.test")+labs(title="NK cell",y="QSOX1 Expression Level")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]]) # get the max no. for each gene
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
+  file_name <- paste0(file_name, "_r.png")
+  ggsave(file_name, width = 5, height = 3)
+}
+
+gene_sig <- c("QSOX1")
+comparisons <- list(c("Healthy", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "NKcell", test_sign = comparisons)
+
+vp_case1 <- function(gene_signature, file_name, test_sign){
+  plot_case1 <- function(signature, y_max = NULL,
+                         cex = 0.75, rot = 30){
+    VlnPlot(Monocyte, features = signature,
+            pt.size = 0.1, 
+            group.by = "Group", 
+            y.max = y_max # add the y-axis maximum value - otherwise p-value hidden
+    )+ scale_fill_viridis(discrete = TRUE, alpha=0.6, option="A") +geom_boxplot(color="black", alpha=0.02)+geom_jitter(color="black", size=0.02, alpha=0.9) + stat_compare_means(comparisons = test_sign, label = "p.format",method = "wilcox.test")+labs(title="Monocyte",y="SMPDL3A Expression Level")
+  }
+  plot_list <- list()
+  y_max_list <- list()
+  for (gene in gene_signature) {
+    plot_list[[gene]] <- plot_case1(gene)
+    y_max_list[[gene]] <- max(plot_list[[gene]]$data[[gene]]) # get the max no. for each gene
+    plot_list[[gene]] <- plot_case1(gene, y_max = (y_max_list[[gene]] + 1) )
+  }
+  cowplot::plot_grid(plotlist = plot_list)
+  file_name <- paste0(file_name, "_r.png")
+  ggsave(file_name, width = 7, height = 4)
+}
+gene_sig <- c("SMPDL3A")
+comparisons <- list(c("Health", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "Monocyte", test_sign = comparisons)
+
+
+gene_sig <- c("PTGDS")
+comparisons <- list(c("Health", "NAFLD"))
+vp_case1(gene_signature = gene_sig, file_name = "Platelets", test_sign = comparisons)
+
+
+markers.to.plot <- c("A2M", "C7", "COL6A3", "COLEC11", "ENPP2", "FBLN1", "FBN1", "FCGBP", "IGFBP6", "LCN2", "LUM", "MMP2", "PAPLN", "PTGDS", "QSOX1", "VWF")
+DotPlot(NAFLDpbmcRPCA15d01, features = markers.to.plot, cols = c("#968F9F","#7c117b"), dot.scale = 6, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+markers.to.plot <- c("AZGP1", "C1RL", "C4BPA", "C6", "C8B", "CFHR3", "CNDP1", "F2", "GC", "HP", "HPR", "IL1RAP", "ITIH1", "ITIH2", "ITIH4", "KLKB1", "PON3", "SERPINA10", "SERPINC1", "SERPING1", "SMPDL3A", "TTR")
+DotPlot(NAFLDpbmcRPCA15d01, features = markers.to.plot, cols = c("#968F9F","#7c117b"), dot.scale = 6, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+
+DimPlot(NAFLDpbmcRPCA15d02, reduction = "umap.rpca", label = TRUE, raster=FALSE) + NoLegend()
+FeaturePlot(NAFLDpbmcRPCA15d02,raster=FALSE, reduction = "umap.rpca", features = c("QSOX1", "IL1RAP"), min.cutoff = "q9")
+
+markers.to.plot <- c("QSOX1")
+DotPlot(NAFLDpbmcRPCA15d01, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 3, split.by = "Group") +
+  RotatedAxis()
+theme_set(theme_cowplot())
+
+VlnPlot(NAFLDpbmcRPCA15d01, raster=FALSE, features = c("QSOX1", "IL1RAP"), split.by = "Group", pt.size = 0, combine = FALSE)
+
+
+FeaturePlot(NAFLDpbmcRPCA15d01, features = c("QSOX1"), split.by = "Group", max.cutoff = 3,
+            cols = c("lightgrey", "darkred"))
+
+library(Seurat)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(CellChat)
+library(igraph)
+library(dplyr)
+library(tidyr)
+
+NAFLD <- readRDS("NAFLDcrosstalkliverPBMC.rds")
+NAFLD <- NAFLDcrosstalk
+head(NAFLD[[]])
+Idents(NAFLD) <- "Group"
+levels(NAFLD)
+#NAFLD_s <- subset(NAFLD, idents = "NAFLD" )
+NAFLD_s <- subset(NAFLD, idents = "Healthy" )
+NAFLD_s
+table(NAFLD_s$rpca_celltype)
+Idents(NAFLD_s) <- "rpca_celltype"
+NAFLD_s <- subset(NAFLD_s, downsample = 5000)
+
+NAFLD_s
+levels(NAFLD_s)
+
+###    Part I: Data input & processing and initialization of CellChat object  #####
+
+# data.input_J <- GetAssayData(NAFLD_s, assay = "RNA", slot = "data") # normalized data matrix
+data.input_J <- LayerData(NAFLD_s, layer = "data",assay = "RNA") # normalized data matrix
+dim(data.input_J)
+labels_J <- Idents(NAFLD_s)
+meta_J <- data.frame(group = labels_J, row.names = names(labels_J)) # create a dataframe of the cell labels
+cellchat_J <- createCellChat(object = data.input_J, meta = meta_J, group.by = "group")
+
+
+####### Set the ligand-receptor interaction database
+
+CellChatDB <- CellChatDB.human 
+showDatabaseCategory(CellChatDB)
+ggsave("1, DatabaseCategory.pdf", height = 5, width = 10)
+write.csv(CellChatDB$interaction, "CellChatDB.interaction.csv")
+write.csv(table(CellChatDB$interaction$pathway_name) , "CellChatDB.interaction.pathway.csv")
+
+# Show the structure of the database
+dplyr::glimpse(CellChatDB$interaction)
+
+#CellChatDB.use <- CellChatDB # simply use the default CellChatDB
+CellChatDB.use <- subsetDB(CellChatDB, search = "Secreted Signaling")
+
+# set the used database in the object
+cellchat_J@DB <- CellChatDB.use
+
+# subset the expression data of signaling genes for saving computation cost
+cellchat <- subsetData(cellchat_J) # This step is necessary even if using the whole database
+future::plan("multisession", workers = 4) # do parallel
+
+cellchat <- identifyOverExpressedGenes(cellchat)
+cellchat <- identifyOverExpressedInteractions(cellchat)
+# project gene expression data onto PPI network (optional)
+cellchat <- projectData(cellchat, PPI.human)
+ 
+####    Part II: Inference of cell-cell communication network  ###### 
+
+## Compute the communication probability and infer cellular communication network
+
+cellchat <- computeCommunProb(cellchat)
+# Filter out the cell-cell communication if there are only few number of cells in certain cell groups
+cellchat <- filterCommunication(cellchat, min.cells = 10)
+
+## Infer the cell-cell communication at a signaling pathway level
+cellchat <- computeCommunProbPathway(cellchat)
+## Calculate the aggregated cell-cell communication network
+cellchat <- aggregateNet(cellchat)
+
+## visualize the aggregated cell-cell communication network
+groupSize <- as.numeric(table(cellchat@idents))
+par(mfrow = c(1,2), xpd=TRUE)
+pdf("2, number of interactions.pdf", height = 6, width = 6)
+netVisual_circle(cellchat@net$count, vertex.weight = groupSize, weight.scale = T, label.edge= F, title.name = "Number of interactions")
+dev.off()
+pdf("3, interaction weight.strength.pdf", height = 6, width = 6)
+netVisual_circle(cellchat@net$weight, vertex.weight = groupSize, weight.scale = T, label.edge= F, title.name = "Interaction weights/strength")
+dev.off()
+
+## an examine the signaling sent from each cell group
+mat <- cellchat@net$weight
+par(mfrow = c(3,4), xpd=TRUE)
+
+pdf("4,signaling sent from each cell group.pdf", height = 6, width = 6)
+for (i in 1:nrow(mat)) {
+  mat2 <- matrix(0, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
+  mat2[i, ] <- mat[i, ]
+  netVisual_circle(mat2, vertex.weight = groupSize, weight.scale = T, edge.weight.max = max(mat), title.name = rownames(mat)[i])
+}
+dev.off()
+
+pdf("4,signaling received by each cell group.pdf", height = 6, width = 6)
+for (i in 1:ncol(mat)) {
+  mat2 <- matrix(0, nrow = nrow(mat), ncol = ncol(mat), dimnames = dimnames(mat))
+  mat2[, i] <- mat[, i]
+  netVisual_circle(mat2, vertex.weight = groupSize, weight.scale = T, edge.weight.max = max(mat), title.name = rownames(mat)[i])
+}
+dev.off()
+####   Part III: Visualization of cell-cell communication network  ###
+
+pathways.show.all <- cellchat@netP$pathways
+
+write.csv(pathways.show.all, "pathways.show.all.csv")
+
+pathways.show <- c("NRG") 
+
+for (pathways.show in pathways.show){
+  dir.create(pathways.show)
+  setwd(pathways.show)
+  # Hierarchy plot
+
+  pdf(paste(pathways.show,"5, network_Hierarchy plot.pdf"), height = 10, width = 10)
+  vertex.receiver = seq(1,4) # a numeric vector. 
+  netVisual_aggregate(cellchat, signaling = pathways.show,  vertex.receiver = vertex.receiver)
+  dev.off()
+  
+  # Circle plot
+  pdf(paste(pathways.show,"6, network_Circle plot.pdf"), height = 10, width = 10)
+  par(mfrow=c(1,1))
+  netVisual_aggregate(cellchat, signaling = pathways.show, layout = "circle")
+  dev.off()
+  
+  # Chord diagram
+  pdf(paste(pathways.show,"7, network_Chord diagram.pdf"), height = 40, width = 20)
+  par(mfrow=c(1,1))
+  netVisual_aggregate(cellchat, thresh = 0.05,
+                      top = 2,
+                      vertex.label.cex = 4, pt.title = 4, show.legend = F, title.space= 12, signaling = pathways.show, layout = "chord")
+  dev.off()
+
+  
+  # Heatmap
+  pdf(paste(pathways.show,"8, network_heatmap.pdf"), height = 15, width = 8)
+  par(mfrow=c(1,1))
+  p <- netVisual_heatmap(cellchat, signaling = pathways.show, color.heatmap = "Reds")
+  print(p)
+  dev.off()
+  #> Do heatmap based on a single object
+  
+  ##  Compute the contribution of each ligand-receptor pair to the overall signaling pathway and visualize cell-cell communication mediated by a single ligand-receptor pair
+  pdf(paste(pathways.show,"9, contribution of each ligand-receptor pair.pdf"), height = 8, width = 5)
+  p <- netAnalysis_contribution(cellchat, signaling = pathways.show)
+  print(p)
+  dev.off()
+  
+}
+
+dir.create("11, all inferred network")
+setwd("11, all inferred network")
+# Access all the signaling pathways showing significant communications
+pathways.show.all <- cellchat@netP$pathways
+# check the order of cell identity to set suitable vertex.receiver
+levels(cellchat@idents)
+vertex.receiver = seq(16,1)
+for (i in 1:length(pathways.show.all)) {
+  # Visualize communication network associated with both signaling pathway and individual L-R pairs
+  #netVisual(cellchat, signaling = pathways.show.all[i], vertex.receiver = vertex.receiver, layout = "hierarchy")
+  netVisual(cellchat, signaling = pathways.show.all[i], vertex.receiver = vertex.receiver, layout = "circle")
+  # Compute and visualize the contribution of each ligand-receptor pair to the overall signaling pathway
+  gg <- netAnalysis_contribution(cellchat, signaling = pathways.show.all[i])
+  ggsave(filename=paste0(pathways.show.all[i], "_L-R_contribution.pdf"), plot=gg, width = 8, height = 6, units = 'in', dpi = 300)
+}
+setwd("..")
+
+
+## Visualize cell-cell communication mediated by multiple ligand-receptors or signaling pathways
+
+# # show all the significant interactions (L-R pairs) from some cell groups (defined by 'sources.use') to other cell groups (defined by 'targets.use')
+# pdf("12, netVisual_bubble.all significant LR_v2.pdf", height = 15, width = 15)
+# netVisual_bubble(cellchat, sources.use = c(1:17), targets.use = 8, remove.isolate = FALSE)
+# dev.off()
+
+for (i in 1:16) {
+  pdf(paste("12, netVisual_bubble.all significant LR_cell_",i,".pdf",sep = ""), height = 8, width = 6)
+  p <- netVisual_bubble(cellchat, sources.use = c(1:16), targets.use = i, remove.isolate = FALSE)
+  print(p)
+  dev.off()
+}
+
+for (i in 1:16) {
+  pdf(paste("12, netVisual_bubble.all significant LR_cell_from",i,".pdf",sep = ""), height = 8, width = 6)
+  p <- netVisual_bubble(cellchat, sources.use = i, targets.use = c(1:16), remove.isolate = FALSE)
+  print(p)
+  dev.off()
+}
+#> Comparing communications on a single object
+
+# show all the significant interactions (L-R pairs) associated with certain signaling pathways
+pdf("13, netVisual_bubble.all significant LR_MIF.pdf", height = 4, width = 15)
+netVisual_bubble(cellchat, sources.use = c(1:16), targets.use = 8, signaling = "MIF", remove.isolate = FALSE)
+dev.off()
+
+
+
